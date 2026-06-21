@@ -31,9 +31,9 @@ Open [http://localhost:3000](http://localhost:3000)
 
 Pushes to `main` automatically deploy via GitHub Actions.
 
-### Custom domain (`nexdesk.app`)
+### Custom domain (`mynexdesk.com`)
 
-1. In GitHub: **Settings → Pages → Custom domain** → enter `nexdesk.app`
+1. In GitHub: **Settings → Pages → Custom domain** → enter `mynexdesk.com`
 2. At your domain registrar, add these DNS records:
 
 | Type  | Name | Value                |

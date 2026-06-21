@@ -6,8 +6,8 @@ const ALLOWED_ORIGINS = [
   "http://127.0.0.1:5173",
   "https://internal-crm-mu.vercel.app",
   "https://nexdesk-marketing.vercel.app",
-  "https://nexdesk.app",
-  "https://www.nexdesk.app",
+  "https://mynexdesk.com",
+  "https://www.mynexdesk.com",
   "https://bigrocks67.github.io",
 ];
 

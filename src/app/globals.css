@@ -1,0 +1,107 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-nx-black: #050505;
+  --color-nx-navy: #08111f;
+  --color-nx-cyan: #00e5ff;
+  --color-nx-aqua: #2fe7e0;
+  --color-nx-grey: #b8c0cc;
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-space);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+:root {
+  --background: #050505;
+  --foreground: #ffffff;
+  --card: rgba(8, 17, 31, 0.72);
+  --card-foreground: #ffffff;
+  --popover: #08111f;
+  --popover-foreground: #ffffff;
+  --primary: #00e5ff;
+  --primary-foreground: #050505;
+  --secondary: #08111f;
+  --secondary-foreground: #ffffff;
+  --muted: #08111f;
+  --muted-foreground: #b8c0cc;
+  --accent: rgba(0, 229, 255, 0.08);
+  --accent-foreground: #00e5ff;
+  --destructive: #ef4444;
+  --border: rgba(184, 192, 204, 0.12);
+  --input: rgba(184, 192, 204, 0.15);
+  --ring: #00e5ff;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply scroll-smooth font-sans overflow-x-hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-nx-black text-white antialiased overflow-x-hidden;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 229, 255, 0.12), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 0%, rgba(47, 231, 224, 0.06), transparent);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.glass {
+  background: rgba(8, 17, 31, 0.55);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(184, 192, 204, 0.1);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 40px rgba(0, 229, 255, 0.15), 0 0 80px rgba(0, 229, 255, 0.05);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #ffffff 0%, #00e5ff 50%, #2fe7e0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(184, 192, 204, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(184, 192, 204, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}

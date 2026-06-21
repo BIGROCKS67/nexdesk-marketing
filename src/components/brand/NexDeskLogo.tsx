@@ -6,6 +6,7 @@ interface NexDeskLogoProps {
   showWordmark?: boolean;
 }
 
+/** Official NexDesk N mark + wordmark */
 export function NexDeskLogo({ className, size = 36, showWordmark = true }: NexDeskLogoProps) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
@@ -14,6 +15,7 @@ export function NexDeskLogo({ className, size = 36, showWordmark = true }: NexDe
         height={size}
         viewBox="0 0 40 40"
         fill="none"
+        xmlns="http://www.w3.org/2000/svg"
         aria-hidden
         className="shrink-0"
       >

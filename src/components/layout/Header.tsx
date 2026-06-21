@@ -59,8 +59,8 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/5 bg-nx-black/90 backdrop-blur-xl supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex h-14 max-w-7xl items-center px-4 sm:h-16 sm:px-6 lg:px-8">
-        <Link href="/" className="shrink-0" onClick={() => setOpen(false)}>
-          <NexDeskLogo size={34} />
+        <Link href="/" className="shrink-0" onClick={() => setOpen(false)} aria-label="NexDesk home">
+          <NexDeskLogo size={38} />
         </Link>
 
         <nav className="ml-8 hidden items-center gap-0.5 xl:ml-14 xl:gap-1 lg:flex">

@@ -17,7 +17,9 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://nexdesk-marketing.vercel.app"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://mynexdesk.com",
+  ),
   title: {
     default: "NexDesk | Custom Business Systems & Enterprise Software",
     template: "%s | NexDesk",
@@ -39,7 +41,10 @@ export const metadata: Metadata = {
     type: "website",
     images: ["/og/nexdesk-og.svg"],
   },
-  icons: { icon: "/favicon.svg" },
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export const viewport: Viewport = {

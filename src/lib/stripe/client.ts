@@ -23,9 +23,13 @@ export function estimateStripeFee(amount: number, currency = "gbp"): number {
 }
 
 export function siteUrl() {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` ||
-    "http://localhost:3000"
-  );
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+
+  const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  if (vercelHost) return `https://${vercelHost.replace(/^https?:\/\//, "")}`;
+
+  return process.env.NODE_ENV === "production"
+    ? "https://nexdesk-marketing.vercel.app"
+    : "http://localhost:3000";
 }

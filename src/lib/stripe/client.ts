@@ -23,7 +23,8 @@ export function estimateStripeFee(amount: number, currency = "gbp"): number {
 }
 
 export function siteUrl() {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/^["']|["']$/g, "");
+  const fromEnv = raw?.replace(/\/$/, "");
   if (fromEnv) return fromEnv;
 
   const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;

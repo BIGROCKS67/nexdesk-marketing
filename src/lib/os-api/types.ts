@@ -12,6 +12,22 @@ export type LeadStatus =
 
 export type PortalSyncStatus = "Synced" | "Pending" | "Error" | "Disconnected";
 
+export type PaymentRecordStatus =
+  | "succeeded"
+  | "pending"
+  | "failed"
+  | "refunded"
+  | "partially_refunded"
+  | "disputed";
+
+export type CommissionStatus =
+  | "Pending"
+  | "Approved"
+  | "Scheduled"
+  | "Paid"
+  | "Rejected"
+  | "Clawed Back";
+
 export interface OsActivity {
   id: string;
   type: string;
@@ -72,6 +88,8 @@ export interface OsClient {
   deposit_paid: boolean;
   assigned_to: string | null;
   created_at: string;
+  stripe_customer_id?: string;
+  payment_method_status?: "valid" | "expiring" | "missing" | "failed";
 }
 
 export interface OsPortalUser {
@@ -95,15 +113,32 @@ export interface OsProject {
   updates: { id: string; date: string; author: string; message: string }[];
 }
 
+export interface OsProduct {
+  id: string;
+  name: string;
+  type: "hosting" | "crm" | "support" | "maintenance" | "setup" | "other";
+  stripe_price_id?: string;
+  amount: number;
+  currency: string;
+  billing_frequency: "monthly" | "yearly" | "one_time";
+  active: boolean;
+}
+
 export interface OsSubscription {
   id: string;
   client_id: string;
   client_name: string;
   product: string;
+  product_id?: string;
   status: string;
   mrr: number;
   started: string;
   renewal: string;
+  stripe_subscription_id?: string;
+  stripe_customer_id?: string;
+  type?: "hosting" | "crm" | "support" | "maintenance" | "other";
+  currency?: string;
+  billing_frequency?: "monthly" | "yearly";
 }
 
 export interface OsInvoice {
@@ -115,6 +150,92 @@ export interface OsInvoice {
   due_date: string;
   paid_at?: string | null;
   products: string[];
+  stripe_invoice_id?: string;
+  stripe_payment_intent_id?: string;
+  hosted_invoice_url?: string;
+  invoice_pdf?: string;
+  currency?: string;
+  stripe_fee?: number;
+  net_amount?: number;
+  payment_type?: "one_time" | "recurring";
+  failed_at?: string | null;
+}
+
+export interface OsPayment {
+  id: string;
+  client_id: string;
+  client_name: string;
+  invoice_id?: string;
+  stripe_payment_intent_id?: string;
+  stripe_charge_id?: string;
+  amount: number;
+  currency: string;
+  status: PaymentRecordStatus;
+  payment_type: "one_time" | "recurring";
+  stripe_fee: number;
+  net_amount: number;
+  paid_at?: string | null;
+  failed_at?: string | null;
+  failure_reason?: string | null;
+  created_at: string;
+}
+
+export interface OsRefund {
+  id: string;
+  client_id: string;
+  payment_id: string;
+  stripe_refund_id?: string;
+  amount: number;
+  currency: string;
+  reason?: string;
+  created_at: string;
+}
+
+export interface OsCommission {
+  id: string;
+  agent_id: string;
+  agent_name: string;
+  agent_role: "affiliate" | "closer" | "setter";
+  client_id: string;
+  client_name: string;
+  payment_id?: string;
+  invoice_id?: string;
+  revenue: number;
+  commission_rate: number;
+  commission: number;
+  status: CommissionStatus;
+  lock_until?: string | null;
+  reason?: string | null;
+  clawback_amount?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OsRevolutTransaction {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  currency: string;
+  category_id?: string;
+  type: "income" | "expense";
+  matched_payment_id?: string | null;
+}
+
+export interface OsExpenseCategory {
+  id: string;
+  name: string;
+  type: "operating" | "payroll" | "software" | "marketing" | "other";
+}
+
+export interface OsAuditLog {
+  id: string;
+  entity_type: "payment" | "invoice" | "commission" | "subscription" | "refund";
+  entity_id: string;
+  action: string;
+  details: string;
+  user: string;
+  at: string;
 }
 
 export interface OsSupportTicket {
@@ -134,10 +255,18 @@ export interface OsStore {
   leads: OsLead[];
   clients: OsClient[];
   projects: OsProject[];
+  products: OsProduct[];
   subscriptions: OsSubscription[];
   invoices: OsInvoice[];
+  payments: OsPayment[];
+  refunds: OsRefund[];
+  commissions: OsCommission[];
+  revolut_transactions: OsRevolutTransaction[];
+  expense_categories: OsExpenseCategory[];
+  audit_logs: OsAuditLog[];
   support: OsSupportTicket[];
   portal_users: OsPortalUser[];
+  commission_lock_days: number;
 }
 
 export interface EnquiryPayload {

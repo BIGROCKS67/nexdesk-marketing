@@ -1,17 +1,19 @@
 import fs from "fs";
 import path from "path";
-import type { OsStore } from "./types";
+import type { OsStore } from "@/lib/os-api/types";
+import { dbEnabled, prisma } from "@/lib/db/prisma";
+import { migrateStore } from "./migrate";
+import { promoteOverdueInvoices } from "./invoices";
 import { createSeedStore } from "./seed";
 
 declare global {
   // eslint-disable-next-line no-var
   var __nexdeskOsStore: OsStore | undefined;
+  // eslint-disable-next-line no-var
+  var __nexdeskStoreLoaded: boolean | undefined;
 }
 
 function storePath() {
-  if (process.env.VERCEL) {
-    return path.join("/tmp", "nexdesk-os-store.json");
-  }
   return path.join(process.cwd(), "data", "nexdesk-os-store.json");
 }
 
@@ -33,29 +35,123 @@ function writeToDisk(store: OsStore) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, JSON.stringify(store, null, 2));
   } catch (err) {
-    console.warn("[os-store] persist failed:", err);
+    console.warn("[os-store] disk persist failed:", err);
   }
 }
 
-export function getStore(): OsStore {
-  if (global.__nexdeskOsStore) return global.__nexdeskOsStore;
-
-  const disk = readFromDisk();
-  global.__nexdeskOsStore = disk ?? createSeedStore();
-  if (!disk) writeToDisk(global.__nexdeskOsStore);
-  return global.__nexdeskOsStore;
+function prepareStore(raw: OsStore): OsStore {
+  const store = migrateStore(raw);
+  promoteOverdueInvoices(store);
+  return store;
 }
 
-export function saveStore(store: OsStore) {
+async function loadFromDatabase(): Promise<OsStore | null> {
+  if (!dbEnabled()) return null;
+  try {
+    const row = await prisma.storeSnapshot.findUnique({ where: { id: "main" } });
+    if (!row) return null;
+    return prepareStore(row.payload as unknown as OsStore);
+  } catch (err) {
+    console.error("[os-store] database load failed:", err);
+    return null;
+  }
+}
+
+async function saveToDatabase(store: OsStore) {
+  if (!dbEnabled()) return;
   store.updated_at = new Date().toISOString();
-  global.__nexdeskOsStore = store;
-  writeToDisk(store);
+  await prisma.storeSnapshot.upsert({
+    where: { id: "main" },
+    create: {
+      id: "main",
+      version: store.version,
+      payload: store as object,
+    },
+    update: {
+      version: store.version,
+      payload: store as object,
+    },
+  });
+  const { syncPortalCredentialsFromStore } = await import("@/lib/db/portal-auth");
+  await syncPortalCredentialsFromStore(store);
 }
 
-export function mutateStore(mutator: (store: OsStore) => void): OsStore {
-  const store = structuredClone(getStore());
+async function bootstrapStore(): Promise<OsStore> {
+  const fromDb = await loadFromDatabase();
+  if (fromDb) return fromDb;
+
+  const fromDisk = readFromDisk();
+  const store = prepareStore(fromDisk ?? createSeedStore());
+
+  if (dbEnabled()) {
+    await saveToDatabase(store);
+  } else if (!fromDisk) {
+    writeToDisk(store);
+  }
+
+  return store;
+}
+
+/** Load store once per warm serverless instance. */
+export async function ensureStore(): Promise<OsStore> {
+  if (global.__nexdeskOsStore && global.__nexdeskStoreLoaded) {
+    promoteOverdueInvoices(global.__nexdeskOsStore);
+    return global.__nexdeskOsStore;
+  }
+
+  const store = await bootstrapStore();
+  global.__nexdeskOsStore = store;
+  global.__nexdeskStoreLoaded = true;
+  return store;
+}
+
+export async function getStore(): Promise<OsStore> {
+  return ensureStore();
+}
+
+export async function saveStore(store: OsStore) {
+  store.updated_at = new Date().toISOString();
+  promoteOverdueInvoices(store);
+  global.__nexdeskOsStore = store;
+  global.__nexdeskStoreLoaded = true;
+
+  if (dbEnabled()) {
+    await saveToDatabase(store);
+  } else {
+    writeToDisk(store);
+  }
+}
+
+/** Transactional mutate — reloads from DB to avoid stale writes on serverless. */
+export async function mutateStore(mutator: (store: OsStore) => void): Promise<OsStore> {
+  if (dbEnabled()) {
+    return prisma.$transaction(async () => {
+      const row = await prisma.storeSnapshot.findUnique({ where: { id: "main" } });
+      const base = row
+        ? prepareStore(row.payload as unknown as OsStore)
+        : prepareStore(readFromDisk() ?? createSeedStore());
+      const store = structuredClone(base);
+      mutator(store);
+      promoteOverdueInvoices(store);
+      store.updated_at = new Date().toISOString();
+
+      await prisma.storeSnapshot.upsert({
+        where: { id: "main" },
+        create: { id: "main", version: store.version, payload: store as object },
+        update: { version: store.version, payload: store as object },
+      });
+      const { syncPortalCredentialsFromStore } = await import("@/lib/db/portal-auth");
+      await syncPortalCredentialsFromStore(store);
+
+      global.__nexdeskOsStore = store;
+      global.__nexdeskStoreLoaded = true;
+      return store;
+    });
+  }
+
+  const store = structuredClone(await ensureStore());
   mutator(store);
-  saveStore(store);
+  await saveStore(store);
   return store;
 }
 

@@ -9,7 +9,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { id } = await params;
   const origin = getOrigin(request);
   const body = await request.json();
-  const store = mutateStore((s) => {
+  const store = await mutateStore((s) => {
     const project = s.projects.find((p) => p.id === id);
     if (!project) return;
     if (body.progress !== undefined) project.progress = body.progress;

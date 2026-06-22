@@ -8,7 +8,7 @@ export async function OPTIONS(request: Request) {
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const origin = getOrigin(request);
-  const store = mutateStore((s) => {
+  const store = await mutateStore((s) => {
     const client = s.clients.find((c) => c.id === id || c.client_id === id);
     if (!client) return;
     client.portal_sync = "Synced";

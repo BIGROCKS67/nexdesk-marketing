@@ -9,7 +9,7 @@ export async function OPTIONS(request: Request) {
 export async function GET(request: Request, { params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = await params;
   const origin = getOrigin(request);
-  const payload = mapPortalPayload(getStore(), clientId);
+  const payload = mapPortalPayload(await getStore(), clientId);
   if (!payload) return jsonResponse({ error: "Client not found" }, { status: 404 }, origin);
   return jsonResponse(payload, undefined, origin);
 }

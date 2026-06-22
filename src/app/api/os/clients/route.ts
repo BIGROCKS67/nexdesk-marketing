@@ -6,5 +6,5 @@ export async function OPTIONS(request: Request) {
 }
 
 export async function GET(request: Request) {
-  return jsonResponse({ clients: getStore().clients }, undefined, getOrigin(request));
+  return jsonResponse({ clients: (await getStore()).clients }, undefined, getOrigin(request));
 }

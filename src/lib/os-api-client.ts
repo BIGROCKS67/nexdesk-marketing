@@ -48,3 +48,41 @@ export async function fetchPortalData(clientId: string) {
   if (!res.ok) throw new Error(data.error || "Failed to load portal data");
   return data;
 }
+
+export async function openBillingPortal(clientId: string) {
+  const res = await fetch(`${OS_API_BASE}/api/stripe/billing-portal`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ clientId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to open billing portal");
+  if (data.url) window.location.href = data.url;
+  return data;
+}
+
+export async function fetchFinanceReports(params?: { clientId?: string; agentId?: string }) {
+  const qs = new URLSearchParams();
+  if (params?.clientId) qs.set("clientId", params.clientId);
+  if (params?.agentId) qs.set("agentId", params.agentId);
+  const res = await fetch(`${OS_API_BASE}/api/finance/reports?${qs}`, { cache: "no-store" });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to load finance data");
+  return data;
+}
+
+export async function updateCommissionStatus(
+  commissionId: string,
+  status: string,
+  reason?: string
+) {
+  const res = await fetch(`${OS_API_BASE}/api/finance/reports`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ commissionId, status, reason }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to update commission");
+  return data;
+}
+

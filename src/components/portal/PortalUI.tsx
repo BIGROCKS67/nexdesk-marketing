@@ -13,6 +13,7 @@ const styles: Record<string, string> = {
   past_due: "bg-amber-500/10 text-amber-400 border-amber-500/30",
   Paid: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
   Due: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+  Overdue: "bg-orange-500/10 text-orange-400 border-orange-500/30",
   Failed: "bg-red-500/10 text-red-400 border-red-500/30",
   Cancelled: "bg-red-500/10 text-red-400 border-red-500/30",
   Live: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",

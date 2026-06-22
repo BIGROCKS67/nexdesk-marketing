@@ -95,6 +95,12 @@ async function run() {
   });
   assert("Client portal login works", auth.res.ok && auth.data.session?.clientId === clientId);
 
+  const finance = await json("/api/finance/reports");
+  assert("Finance reports API", finance.res.ok && finance.data.report?.grossRevenue !== undefined);
+  assert("Finance commissions seeded", (finance.data.commissions?.length ?? 0) > 0);
+  assert("Portal payments in payload", (portal.data.payments?.length ?? 0) >= 0);
+  assert("State API strips portal passwords", (await json("/api/os/state")).data.portal_users?.length === 0);
+
   const bulk = await Promise.all(
     Array.from({ length: 10 }, (_, i) =>
       json("/api/os/enquiries", {

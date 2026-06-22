@@ -12,6 +12,8 @@ import {
   getClientData,
 } from "@/data/portal/mock-data";
 import type { SubscriptionStatus } from "@/data/portal/types";
+import { useLivePortalData } from "@/hooks/useLivePortalData";
+import { openBillingPortal } from "@/lib/os-api-client";
 import { cn } from "@/lib/utils";
 
 type TabKey = "all" | SubscriptionStatus;
@@ -32,10 +34,15 @@ const typeLabels: Record<string, string> = {
 
 export default function SubscriptionsPage() {
   const { session } = useClientPortal();
-  const data = getClientData(session?.clientId ?? DEMO_CLIENT_ID);
+  const clientId = session?.clientId ?? DEMO_CLIENT_ID;
+  const { data: live, loading } = useLivePortalData(clientId);
+  const fallback = getClientData(clientId);
+  const data = live ? { ...fallback, subscriptions: live.subscriptions } : fallback;
+
   const [tab, setTab] = useState<TabKey>("all");
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelled, setCancelled] = useState<string[]>([]);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   const activeSubs = data.subscriptions.filter((s) => s.subscriptionStatus === "active" && !cancelled.includes(s.id));
   const monthlySpend = calcMonthlySpend(activeSubs);
@@ -47,12 +54,25 @@ export default function SubscriptionsPage() {
     return s.subscriptionStatus === tab;
   });
 
+  async function handleManage() {
+    setPortalLoading(true);
+    try {
+      await openBillingPortal(clientId);
+    } catch {
+      /* demo mode may still redirect */
+    } finally {
+      setPortalLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PortalPageHeader
         title="Subscriptions"
-        description="All recurring services across your businesses — hosting, CRM licences, support, and more."
+        description="Recurring hosting, CRM licences, and support — billed automatically via Stripe."
       />
+
+      {loading && !live && <p className="text-xs text-nx-grey">Syncing subscriptions…</p>}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <PortalStatCard label="Total Subscriptions" value={String(activeSubs.length)} sub={`${data.subscriptions.filter((s) => s.subscriptionStatus === "cancelled").length} cancelled`} />
@@ -95,7 +115,9 @@ export default function SubscriptionsPage() {
             <p className="mt-2 text-xs text-nx-grey">Next payment: {sub.nextPaymentDate}</p>
             <p className="mt-1 font-mono text-[10px] text-nx-grey">{sub.stripeSubscriptionId}</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button size="sm" variant="outline">Manage</Button>
+              <Button size="sm" variant="outline" onClick={handleManage} disabled={portalLoading}>
+                {portalLoading ? "Opening…" : "Manage"}
+              </Button>
               {sub.subscriptionStatus === "active" && (
                 <Button size="sm" variant="destructive" onClick={() => setCancelId(sub.id)}>
                   Cancel
@@ -114,7 +136,7 @@ export default function SubscriptionsPage() {
           <div className="glass max-w-md rounded-xl p-6">
             <h3 className="font-display text-lg font-bold text-white">Cancel subscription?</h3>
             <p className="mt-2 text-sm text-nx-grey">
-              This will cancel at the end of the current billing period. Contact support to reactivate.
+              You&apos;ll be redirected to Stripe to cancel at the end of the current billing period.
             </p>
             <div className="mt-6 flex gap-3">
               <Button variant="outline" className="flex-1" onClick={() => setCancelId(null)}>
@@ -124,11 +146,11 @@ export default function SubscriptionsPage() {
                 variant="destructive"
                 className="flex-1"
                 onClick={() => {
-                  setCancelled((c) => [...c, cancelId]);
                   setCancelId(null);
+                  handleManage();
                 }}
               >
-                Confirm Cancel
+                Continue in Stripe
               </Button>
             </div>
           </div>

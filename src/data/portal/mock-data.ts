@@ -371,12 +371,30 @@ export const allInvoices: PortalInvoice[] = [
     amount: 450,
     currency: "AED",
     dueDate: "1 Apr 2026",
-    paymentStatus: "Failed",
+    paymentStatus: "Overdue",
     stripeInvoiceId: "in_demo_1019",
     hostedInvoiceUrl: "https://invoice.stripe.com/demo/inv_1019",
     invoicePdf: "/invoices/demo-1019.pdf",
   },
 ];
+
+export const allMockPayments = [
+  {
+    id: "pay-mock-fail",
+    clientId: DEMO_CLIENT_ID,
+    amount: 18500,
+    currency: "AED",
+    status: "failed",
+    paymentType: "one_time",
+    stripeFee: 0,
+    netAmount: 0,
+    failedAt: "2026-06-20T14:30:00Z",
+    failureReason: "Your card was declined.",
+    invoiceId: "inv-1042",
+  },
+];
+
+export const allMockRefunds: { id: string; clientId: string; paymentId: string; amount: number; currency: string; reason?: string; createdAt: string }[] = [];
 
 export const allWebsites: PortalWebsite[] = [
   {
@@ -470,6 +488,8 @@ export function getClientData(clientId: string) {
     tickets: allSupportTickets.filter((t) => t.clientId === clientId),
     activity: allActivity.filter((a) => a.clientId === clientId),
     teamMembers: demoTeamMembers,
+    payments: allMockPayments.filter((p) => p.clientId === clientId),
+    refunds: allMockRefunds.filter((r) => r.clientId === clientId),
   };
 }
 

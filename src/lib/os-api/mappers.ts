@@ -1,5 +1,16 @@
 import { BUILD_STAGES } from "@/data/portal/types";
-import type { OsClient, OsInvoice, OsLead, OsProject, OsStore, OsSubscription, OsSupportTicket } from "./types";
+import { invoicePortalStatus } from "./invoices";
+import type {
+  OsClient,
+  OsInvoice,
+  OsLead,
+  OsPayment,
+  OsProject,
+  OsRefund,
+  OsStore,
+  OsSubscription,
+  OsSupportTicket,
+} from "./types";
 
 function stagesForProgress(progress: number) {
   const idx = Math.min(
@@ -31,23 +42,26 @@ function mapProject(p: OsProject) {
   };
 }
 
-function mapSubscription(s: OsSubscription) {
+function mapSubscription(s: OsSubscription, client?: OsClient) {
+  const statusMap: Record<string, "active" | "inactive" | "cancelled" | "past_due"> = {
+    Active: "active",
+    Trial: "inactive",
+    Cancelled: "cancelled",
+    "Past Due": "past_due",
+    Inactive: "inactive",
+  };
   return {
     id: s.id,
     clientId: s.client_id,
     productName: s.product,
+    type: s.type ?? "other",
     amount: s.mrr,
-    currency: "AED",
-    billingFrequency: "monthly" as const,
+    currency: s.currency ?? "GBP",
+    billingFrequency: (s.billing_frequency ?? "monthly") as "monthly" | "yearly",
     nextPaymentDate: s.renewal,
-    subscriptionStatus:
-      s.status === "Active"
-        ? ("active" as const)
-        : s.status === "Trial"
-          ? ("inactive" as const)
-          : ("inactive" as const),
-    stripeSubscriptionId: `sub_${s.id}`,
-    stripeCustomerId: `cus_${s.client_id}`,
+    subscriptionStatus: statusMap[s.status] ?? "inactive",
+    stripeSubscriptionId: s.stripe_subscription_id ?? `sub_${s.id}`,
+    stripeCustomerId: s.stripe_customer_id ?? client?.stripe_customer_id ?? `cus_${s.client_id}`,
   };
 }
 
@@ -58,18 +72,42 @@ function mapInvoice(i: OsInvoice) {
     invoiceNumber: i.id,
     productOrService: i.products.join(", "),
     amount: i.amount,
-    currency: "AED",
+    currency: i.currency ?? "GBP",
     dueDate: i.due_date,
     paidDate: i.paid_at ?? undefined,
-    paymentStatus:
-      i.status === "Paid"
-        ? ("Paid" as const)
-        : i.status === "Overdue"
-          ? ("Due" as const)
-          : ("Due" as const),
-    stripeInvoiceId: `inv_${i.id}`,
-    hostedInvoiceUrl: "#",
-    invoicePdf: "#",
+    paymentStatus: invoicePortalStatus(i),
+    stripeInvoiceId: i.stripe_invoice_id ?? `inv_${i.id}`,
+    hostedInvoiceUrl: i.hosted_invoice_url ?? "#",
+    invoicePdf: i.invoice_pdf ?? "#",
+  };
+}
+
+function mapPayment(p: OsPayment) {
+  return {
+    id: p.id,
+    clientId: p.client_id,
+    amount: p.amount,
+    currency: p.currency,
+    status: p.status,
+    paymentType: p.payment_type,
+    stripeFee: p.stripe_fee,
+    netAmount: p.net_amount,
+    paidAt: p.paid_at,
+    failedAt: p.failed_at,
+    failureReason: p.failure_reason,
+    invoiceId: p.invoice_id,
+  };
+}
+
+function mapRefund(r: OsRefund) {
+  return {
+    id: r.id,
+    clientId: r.client_id,
+    paymentId: r.payment_id,
+    amount: r.amount,
+    currency: r.currency,
+    reason: r.reason,
+    createdAt: r.created_at,
   };
 }
 
@@ -101,10 +139,14 @@ function mapSupport(t: OsSupportTicket) {
 export function mapClientProfile(client: OsClient) {
   return {
     id: client.id,
+    customerId: client.client_id,
     name: client.contact_name,
     email: client.email,
+    phone: client.phone,
+    address: "",
     company: client.business_name,
-    stripeCustomerId: `cus_${client.id}`,
+    stripeCustomerId: client.stripe_customer_id ?? `cus_${client.id}`,
+    paymentMethodStatus: client.payment_method_status ?? "unknown",
   };
 }
 
@@ -115,20 +157,32 @@ export function mapPortalPayload(store: OsStore, clientId: string) {
   const projects = store.projects.filter((p) => p.client_id === client.id).map(mapProject);
   const subscriptions = store.subscriptions
     .filter((s) => s.client_id === client.id)
-    .map(mapSubscription);
+    .map((s) => mapSubscription(s, client));
   const invoices = store.invoices.filter((i) => i.client_id === client.id).map(mapInvoice);
+  const payments = store.payments.filter((p) => p.client_id === client.id).map(mapPayment);
+  const refunds = store.refunds.filter((r) => r.client_id === client.id).map(mapRefund);
   const tickets = store.support.filter((t) => t.client_id === client.id).map(mapSupport);
 
-  const activity = projects.flatMap((p) =>
-    p.updates.slice(0, 1).map((u) => ({
-      id: `act-${p.id}-${u.id}`,
+  const activity = [
+    ...projects.flatMap((p) =>
+      p.updates.slice(0, 1).map((u) => ({
+        id: `act-${p.id}-${u.id}`,
+        clientId: client.id,
+        type: "project" as const,
+        title: p.name,
+        description: u.message,
+        date: u.date,
+      }))
+    ),
+    ...payments.slice(0, 5).map((p) => ({
+      id: `act-pay-${p.id}`,
       clientId: client.id,
-      type: "project" as const,
-      title: p.name,
-      description: u.message,
-      date: u.date,
-    }))
-  );
+      type: "payment" as const,
+      title: p.status === "succeeded" ? "Payment received" : "Payment failed",
+      description: `${p.currency} ${p.amount} — ${p.status}`,
+      date: p.paidAt ?? p.failedAt ?? new Date().toISOString(),
+    })),
+  ];
 
   return {
     client: mapClientProfile(client),
@@ -137,6 +191,8 @@ export function mapPortalPayload(store: OsStore, clientId: string) {
     projects,
     subscriptions,
     invoices,
+    payments,
+    refunds,
     websites: [],
     products: subscriptions.map((s) => ({
       id: `prod-${s.id}`,
@@ -153,16 +209,19 @@ export function mapPortalPayload(store: OsStore, clientId: string) {
   };
 }
 
-export function leadFromEnquiry(payload: {
-  name: string;
-  company: string;
-  email: string;
-  phone?: string;
-  details: string;
-  source?: string;
-  product_interest?: string;
-  system_type?: string;
-}, leadId: string) {
+export function leadFromEnquiry(
+  payload: {
+    name: string;
+    company: string;
+    email: string;
+    phone?: string;
+    details: string;
+    source?: string;
+    product_interest?: string;
+    system_type?: string;
+  },
+  leadId: string
+) {
   const product =
     payload.product_interest ||
     payload.system_type ||
@@ -207,7 +266,7 @@ export function leadFromEnquiry(payload: {
 export function clientFromLead(
   lead: OsLead,
   clientId: string,
-  opts: { depositPaid?: boolean; portalPassword?: string } = {}
+  opts: { depositPaid?: boolean; portalPassword?: string; stripeCustomerId?: string } = {}
 ) {
   const password = opts.portalPassword || "NexDesk2026!";
   return {
@@ -236,6 +295,8 @@ export function clientFromLead(
       deposit_paid: !!opts.depositPaid,
       assigned_to: lead.closer_id || lead.assigned_to,
       created_at: new Date().toISOString().slice(0, 10),
+      stripe_customer_id: opts.stripeCustomerId,
+      payment_method_status: opts.depositPaid ? ("valid" as const) : ("missing" as const),
     },
     portalUser: opts.depositPaid
       ? {

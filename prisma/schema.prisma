@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_URL")
+}
+
+/// Single-row JSON document store for the NexDesk OS (leads, clients, finance, etc.)
+model StoreSnapshot {
+  id        String   @id @default("main")
+  version   Int      @default(2)
+  payload   Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("store_snapshots")
+}
+
+/// Portal login credentials — kept separate from JSON so passwords can be hashed
+model PortalCredential {
+  id           String   @id @default(cuid())
+  clientId     String   @map("client_id")
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  company      String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([clientId])
+  @@map("portal_credentials")
+}
+
+/// Append-only audit trail (also mirrored in store payload for UI)
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  action     String
+  details    String
+  actor      String   @default("system")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

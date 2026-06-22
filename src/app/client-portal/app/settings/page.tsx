@@ -9,18 +9,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DEMO_CLIENT_ID, demoClient, getClientData } from "@/data/portal/mock-data";
+import { useLivePortalData } from "@/hooks/useLivePortalData";
+import { openBillingPortal } from "@/lib/os-api-client";
 
 export default function SettingsPage() {
   const { session } = useClientPortal();
-  const profile = getClientData(session?.clientId ?? DEMO_CLIENT_ID).profile ?? demoClient;
+  const clientId = session?.clientId ?? DEMO_CLIENT_ID;
+  const { data: live } = useLivePortalData(clientId);
+  const fallback = getClientData(clientId);
+  const profile = live?.client ? { ...fallback.profile, ...live.client } : fallback.profile ?? demoClient;
 
   const [name, setName] = useState(profile.name);
   const [email, setEmail] = useState(profile.email);
   const [phone, setPhone] = useState(profile.phone);
   const [address, setAddress] = useState(profile.address);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [team, setTeam] = useState(getClientData(session?.clientId ?? DEMO_CLIENT_ID).teamMembers);
+  const [team, setTeam] = useState(fallback.teamMembers);
   const [saved, setSaved] = useState(false);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const paymentMethodStatus = live?.client?.paymentMethodStatus;
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -38,6 +45,15 @@ export default function SettingsPage() {
     setInviteEmail("");
   }
 
+  async function handleBillingPortal() {
+    setBillingLoading(true);
+    try {
+      await openBillingPortal(clientId);
+    } finally {
+      setBillingLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <PortalPageHeader
@@ -45,7 +61,6 @@ export default function SettingsPage() {
         description="Manage your personal account. Use a personal email to access all your businesses from one login."
       />
 
-      {/* Profile photo */}
       <div className="glass max-w-2xl rounded-xl p-5 sm:p-6">
         <h2 className="font-display text-base font-bold text-white">Profile Photo</h2>
         <div className="mt-4 flex items-center gap-5">
@@ -70,7 +85,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Personal details */}
       <form onSubmit={handleSave} className="glass max-w-2xl rounded-xl p-5 sm:p-6">
         <h2 className="font-display text-base font-bold text-white">Personal Details</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -88,7 +102,7 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="address">Address</Label>
-            <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} rows={2} />
+            <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
           </div>
         </div>
         <div className="mt-4 rounded-lg border border-white/5 bg-nx-black/30 px-4 py-3">
@@ -100,25 +114,31 @@ export default function SettingsPage() {
         </Button>
       </form>
 
-      {/* Payment method */}
       <div className="glass max-w-2xl rounded-xl p-5 sm:p-6">
         <div className="flex items-center gap-2">
           <CreditCard className="h-5 w-5 text-nx-cyan" />
           <h2 className="font-display text-base font-bold text-white">Payment Method</h2>
         </div>
         <p className="mt-2 text-sm text-nx-grey">
-          When Stripe is connected, you&apos;ll be able to update card details securely via the Stripe Customer Portal.
+          Update card details securely via the Stripe Customer Portal.
         </p>
         <div className="mt-4 rounded-lg border border-white/5 bg-nx-black/30 px-4 py-3">
           <p className="text-xs text-nx-grey">Stripe Customer ID</p>
           <p className="font-mono text-sm text-white">{profile.stripeCustomerId}</p>
+          {paymentMethodStatus && (
+            <p className="mt-2 text-xs text-nx-grey">
+              Payment method:{" "}
+              <span className={paymentMethodStatus === "valid" ? "text-emerald-400" : "text-amber-400"}>
+                {paymentMethodStatus}
+              </span>
+            </p>
+          )}
         </div>
-        <Button variant="outline" className="mt-4" disabled>
-          Update payment details (Stripe — coming soon)
+        <Button variant="outline" className="mt-4" onClick={handleBillingPortal} disabled={billingLoading}>
+          {billingLoading ? "Opening Stripe…" : "Update payment details"}
         </Button>
       </div>
 
-      {/* Team access */}
       <div className="glass max-w-2xl rounded-xl p-5 sm:p-6">
         <div className="flex items-center gap-2">
           <UserPlus className="h-5 w-5 text-nx-cyan" />

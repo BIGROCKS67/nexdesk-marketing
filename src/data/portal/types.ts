@@ -1,7 +1,7 @@
 export type ProjectCategory = "Bespoke Systems" | "Websites" | "Off-the-Shelf Systems";
 export type ProjectStatus = "Not Started" | "In Progress" | "Review" | "Completed" | "On Hold";
 export type SubscriptionStatus = "active" | "inactive" | "cancelled" | "past_due";
-export type PaymentStatus = "Paid" | "Due" | "Failed" | "Cancelled";
+export type PaymentStatus = "Paid" | "Due" | "Overdue" | "Failed" | "Cancelled";
 export type SupportStatus = "Open" | "Waiting for Reply" | "Resolved";
 export type WebsiteStatus = "Live" | "In Build" | "Maintenance" | "Suspended";
 export type ProductCategory =

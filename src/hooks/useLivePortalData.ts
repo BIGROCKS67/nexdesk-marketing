@@ -12,12 +12,50 @@ import type {
   SupportTicket,
 } from "@/data/portal/types";
 
+export interface PortalPayment {
+  id: string;
+  clientId: string;
+  amount: number;
+  currency: string;
+  status: string;
+  paymentType: string;
+  stripeFee: number;
+  netAmount: number;
+  paidAt?: string;
+  failedAt?: string;
+  failureReason?: string | null;
+  invoiceId?: string;
+}
+
+export interface PortalRefund {
+  id: string;
+  clientId: string;
+  paymentId: string;
+  amount: number;
+  currency: string;
+  reason?: string;
+  createdAt: string;
+}
+
 export interface LivePortalData {
   buildProgress: number;
   portalSync: string;
+  client?: {
+    id: string;
+    customerId: string;
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    company: string;
+    stripeCustomerId: string;
+    paymentMethodStatus?: string;
+  };
   projects: PortalProject[];
   subscriptions: PortalSubscription[];
   invoices: PortalInvoice[];
+  payments: PortalPayment[];
+  refunds: PortalRefund[];
   websites: PortalWebsite[];
   products: PortalProduct[];
   tickets: SupportTicket[];
@@ -38,9 +76,12 @@ export function useLivePortalData(clientId: string | undefined, refreshKey = 0) 
       setData({
         buildProgress: payload.buildProgress,
         portalSync: payload.portalSync,
+        client: payload.client,
         projects: payload.projects,
         subscriptions: payload.subscriptions,
         invoices: payload.invoices,
+        payments: payload.payments ?? [],
+        refunds: payload.refunds ?? [],
         websites: payload.websites,
         products: payload.products,
         tickets: payload.tickets,

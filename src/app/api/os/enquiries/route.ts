@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   if (!body.name || !body.company || !body.email || !body.details) {
     return jsonResponse({ error: "Missing required fields" }, { status: 400 }, origin);
   }
-  const store = getStore();
+  const store = await getStore();
   const duplicate = store.leads.find(
     (l) => l.email === body.email && l.business_name === body.company && l.notes === body.details,
   );
@@ -21,6 +21,6 @@ export async function POST(request: Request) {
     return jsonResponse({ duplicate: true, lead_id: duplicate.lead_id }, { status: 200 }, origin);
   }
   const leadId = nextLeadId(store);
-  mutateStore((s) => { s.leads.unshift(leadFromEnquiry(body, leadId)); });
+  await mutateStore((s) => { s.leads.unshift(leadFromEnquiry(body, leadId)); });
   return jsonResponse({ lead_id: leadId, id: leadId }, { status: 201 }, origin);
 }
